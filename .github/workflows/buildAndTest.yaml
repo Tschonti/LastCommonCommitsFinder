@@ -12,12 +12,12 @@ jobs:
   buildAndTest:
     runs-on: ubuntu-latest
 
-    env:
-      GITHUB_PAT: ${{ secrets.GH_PAT }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Create .env file
+        run: echo "GITHUB_PAT=${{ secrets.GH_PAT }}" > .env
 
       - name: Set up JDK
         uses: actions/setup-java@v4
