@@ -1,3 +1,4 @@
+import io.github.cdimascio.dotenv.dotenv
 import io.ktor.utils.io.errors.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -19,8 +20,7 @@ class DefaultLastCommonCommitsFinderTest {
             finder = factory.create(
                 "Tschonti",
                 "common-commit-test",
-                "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"
-                // fine-grained token, read-only access to a dummy repo
+                dotenv()["GITHUB_PAT"]
             )
         }
     }
@@ -41,5 +41,12 @@ class DefaultLastCommonCommitsFinderTest {
         assertContains(lastCommonCommits, "a6dc1d725f7770dccdd7c74c9a7e4af72b518f86")
         assertContains(lastCommonCommits, "0239179e4bfdb1237aa029bd0228c747da823e4d")
         assertEquals(2, lastCommonCommits.size)
+    }
+
+    @Test
+    fun `should find the last common commit for branches with simple history`() {
+        val lastCommonCommits = finder.findLastCommonCommits("branch-C", "branch-D")
+        assertContains(lastCommonCommits, "d3ac56bbd06378df41f2e3b761ec8de34ae07133")
+        assertEquals(1, lastCommonCommits.size)
     }
 }

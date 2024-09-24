@@ -34,28 +34,27 @@ class DefaultLastCommonCommitsFinder(private val owner: String, private val repo
             val branchBCommits = async { getBranchCommits(branchB) }
 
             val commonCommits = mutableSetOf<Commit>()
-            val inspectedCommits = mutableMapOf<String, String?>()  // parentCommitSha -> childCommitSha
+            val inspectedCommits = mutableMapOf<String, MutableList<String>>()  // parentCommitSha -> childCommitSha
 
             val aCommits = branchACommits.await()
-            aCommits.forEach {
-                if (it.parents == null) {
-                    inspectedCommits[it.sha] = null
-                } else {
-                    it.parents.forEach { pCommit ->
-                        inspectedCommits[pCommit.sha] = it.sha
+            aCommits.forEach { childCommit ->
+                childCommit.parents?.forEach { parentCommit ->
+                    if (inspectedCommits.containsKey(parentCommit.sha)) {
+                        inspectedCommits[parentCommit.sha]?.add(childCommit.sha)
+                    } else {
+                        inspectedCommits[parentCommit.sha] = mutableListOf(childCommit.sha)
                     }
                 }
             }
 
             val bCommits = branchBCommits.await()
-            bCommits.forEach {
-                if (it.parents == null) {
-                    inspectedCommits[it.sha] = null
-                } else {
-                    it.parents.forEach { pCommit ->
-                        if (inspectedCommits.containsKey(pCommit.sha) && inspectedCommits[pCommit.sha] != it.sha) {     // todo biztos lehet egyelo?
-                            commonCommits.add(pCommit)
-                        }
+            bCommits.forEach { childCommit ->
+                childCommit.parents?.forEach { parentCommit ->
+                    if (inspectedCommits.containsKey(parentCommit.sha) && inspectedCommits[parentCommit.sha]?.contains(
+                            childCommit.sha
+                        ) != true
+                    ) {
+                        commonCommits.add(parentCommit)
                     }
                 }
             }
