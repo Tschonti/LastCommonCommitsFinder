@@ -1,3 +1,4 @@
+import commoncommitsfinder.DefaultLastCommonCommitsFinderFactory
 import kotlin.test.Test
 import kotlin.test.fail
 

@@ -1,3 +1,4 @@
+package commoncommitsfinder
 
 import java.io.IOException
 
