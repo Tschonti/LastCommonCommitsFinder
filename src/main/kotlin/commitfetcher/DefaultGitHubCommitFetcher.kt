@@ -29,7 +29,16 @@ open class DefaultGitHubCommitFetcher(private val owner: String, private val rep
         }
     }
 
-    override suspend fun getBranchCommits(branchNameOrSha: String, since: String?): List<Commit> {
+    /**
+     * Fetches the commits using GitHub's REST API.
+     * If there are more than 100 commits, it will send additional request to the API until all commits are retrieved.
+     * @param branchNameOrSha If it's a branch name, the commits of that branch will be returned.
+     * If it's a commit SHA, the history of that commit (inclusive) will be returned.
+     * @param since Timestamp in ISO 8601 format. If provided, only commits since that timestamp will be returned.
+     * @return Collection of commits
+     * @throws IOException if any errors occur
+     */
+    override suspend fun fetchCommits(branchNameOrSha: String, since: String?): List<Commit> {
         var response = client.get("") {
             url {
                 parameters.append("sha", branchNameOrSha)
@@ -39,13 +48,11 @@ open class DefaultGitHubCommitFetcher(private val owner: String, private val rep
         }
         if (response.status == HttpStatusCode.OK) {
             val commitData: MutableList<Commit> = response.body()
-            var nextPageHeader = this.extractNextPageHeader(response)
-            while (nextPageHeader != null) {
-                val urlRegex = "<(.*?)>".toRegex()
-                val url = urlRegex.find(nextPageHeader)!!.groups[1]!!.value
-                response = client.get(url)
+            var nextPageUrl = this.extractNextPageUrl(response)
+            while (nextPageUrl != null) {
+                response = client.get(nextPageUrl)
                 if (response.status == HttpStatusCode.OK) {
-                    nextPageHeader = this.extractNextPageHeader(response)
+                    nextPageUrl = this.extractNextPageUrl(response)
                     commitData.addAll(response.body())
                 } else {
                     throw IOException("Request to GitHub failed with status code ${response.status}")
@@ -60,7 +67,18 @@ open class DefaultGitHubCommitFetcher(private val owner: String, private val rep
     }
 
 
-    private fun extractNextPageHeader(res: HttpResponse): String? {
-        return res.headers["link"]?.split(",")?.find { it.endsWith("rel=\"next\"") }
+    /**
+     * Extracts the URL for the next page of data from the HTTP response headers, if present.
+     * Based on: https://docs.github.com/en/rest/using-the-rest-api/using-pagination-in-the-rest-api?apiVersion=2022-11-28
+     * @param res HttpResponse from a paginated GitHub REST API endpoint
+     * @return URL for the next page of data, or null in case the next page header was not present on the response
+     */
+    private fun extractNextPageUrl(res: HttpResponse): String? {
+        val header = res.headers["link"]?.split(",")?.find { it.endsWith("rel=\"next\"") }
+        if (header == null) {
+            return null
+        }
+        val urlRegex = "<(.*?)>".toRegex()
+        return urlRegex.find(header)!!.groups[1]!!.value
     }
 }

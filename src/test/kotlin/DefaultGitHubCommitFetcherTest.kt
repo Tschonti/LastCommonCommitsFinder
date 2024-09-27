@@ -28,17 +28,17 @@ open class DefaultGitHubCommitFetcherTest {
 
     @Test
     fun `should throw error if the repository is private and no or invalid token was provided`() = runTest {
-        assertFailsWith<IOException> { fetcherWithoutToken.getBranchCommits("master") }
+        assertFailsWith<IOException> { fetcherWithoutToken.fetchCommits("master") }
     }
 
     @Test
     fun `should throw error if non-existent branchName was provided`() = runTest {
-        assertFailsWith<IOException> { fetcher.getBranchCommits("non-existent-branch") }
+        assertFailsWith<IOException> { fetcher.fetchCommits("non-existent-branch") }
     }
 
     @Test
     fun `should return all commits with no second parameter`() = runTest {
-        val commits = fetcher.getBranchCommits("branch-B")
+        val commits = fetcher.fetchCommits("branch-B")
         assertContains(commits.map { it.sha }, "0239179e4bfdb1237aa029bd0228c747da823e4d")
         assertContains(commits.map { it.sha }, "01f213baa6878e4245d8c320089ac8cdd912584b")
         assertEquals(2, commits.size)
@@ -47,7 +47,7 @@ open class DefaultGitHubCommitFetcherTest {
     @Test
     fun `should return the recent commits when a second parameter is provided`() = runTest {
         val cutOffDate = "2024-09-24T10:00:00Z"
-        val commits = fetcher.getBranchCommits("branch-B", cutOffDate)
+        val commits = fetcher.fetchCommits("branch-B", cutOffDate)
         assertContains(commits.map { it.sha }, "0239179e4bfdb1237aa029bd0228c747da823e4d")
         assertEquals(1, commits.size)
         assertTrue(commits.first().date!! > cutOffDate)
